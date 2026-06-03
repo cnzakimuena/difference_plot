@@ -5,7 +5,6 @@ the plot is customized and the final figure is saved.
 """
 import os
 import numpy as np
-import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -32,6 +31,7 @@ def get_star_number(p_value):
 
 
 def generate_plot(metrics_df,
+                  group_variable,
                   metrics_variable_list,
                   x_range,
                   **plot_kwargs):
@@ -48,13 +48,14 @@ def generate_plot(metrics_df,
     plt.rcParams.update({'font.size': 16})
 
     # generate plot
-    fig, ax = plt.subplots(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(7, 7))
 
     # create list with specified lenght starting from 2 with interval 2, reverse the list
+    group_values = sorted(list(metrics_df[group_variable].tolist()))
     y_locations_start = 2
     y_locations_interval = 2
     y_locations = \
-        list(range(2, (len(metrics_df) * 2) + y_locations_interval, y_locations_start))[::-1]
+        list(range(2, (len(group_values) * 2) + y_locations_interval, y_locations_start))[::-1]
 
     # set x and y limits
     plt.xlim([x_range[0], x_range[1]])
@@ -76,7 +77,7 @@ def generate_plot(metrics_df,
         current_q3_list = metrics_df[metrics_variable_list[2]].tolist()
         p_location_reference = (x_range[1]-x_range[0]) * 0.08
         for h, current_p_value in enumerate(current_p_values_list):
-            if current_p_value < 0.05:
+            if current_p_value is not None and current_p_value < 0.05:
                 x_location = None
                 # right if mean is positive
                 if metrics_df.iat[h, 0] >= 0:
@@ -121,7 +122,7 @@ def generate_plot(metrics_df,
     # adjust subplots spacing
     # if subplots are added, can include, for e.g., 'wspace=0.4, hspace=0.4'
     # to control padding between subplots
-    plt.subplots_adjust(bottom=0.2, top=0.85, left=0.3, right=0.85)
+    plt.subplots_adjust(bottom=0.25, top=0.85, left=0.3, right=0.8)
 
     # add global title
     if 'super_title' in plot_kwargs:
@@ -131,64 +132,21 @@ def generate_plot(metrics_df,
 if __name__ == '__main__':
 
     # --- read data ---
-    # if preprocessed data does not exist, generate preprocessed data
-    if not os.path.exists(r'.\metrics.csv') and not os.path.exists(r'.\p_values.csv'):
-        EXAMPLE_DATA_PATH = r'.\chickweight.csv'
-        example_preprocessor = Preprocessor(EXAMPLE_DATA_PATH)
-        # specify preprocessing variables
-        example_subject_variable = example_preprocessor.data_df.columns[2]
-        example_dependent_variable = example_preprocessor.data_df.columns[0]
-        example_condition_variable = example_preprocessor.data_df.columns[3]
-        example_group_variable = example_preprocessor.data_df.columns[1]
-        # gather preprocessed data
-        example_preprocessor.get_preprocessed_data(example_subject_variable,
-                                                example_dependent_variable,
-                                                example_condition_variable,
-                                                example_group_variable,
-                                                save_csv_files=True)
-    # read preprocessed data
-    EXAMPLE_METRICS_PATH = r'.\metrics.csv'
-    EXAMPLE_P_VALUES_PATH = r'.\p_values.csv'
-    example_metrics_df = pd.read_csv(EXAMPLE_METRICS_PATH)
-    example_p_values_df = pd.read_csv(EXAMPLE_P_VALUES_PATH)
-
-    # --- specify plotting variables ---
-    example_condition_variable = example_metrics_df.columns[3]
-    example_group_variable = example_metrics_df.columns[4]
-    # store average, Q1 and Q3 metrics variables, respectively
-    example_metrics_variable_list = [example_metrics_df.columns[0],
-                                     example_metrics_df.columns[1],
-                                     example_metrics_df.columns[2]]
-
+    EXAMPLE_DATA_PATH = r'.\chickweight.csv'
+    example_data = Preprocessor(EXAMPLE_DATA_PATH)
+    example_data.get_preprocessed_data(save_csv_files=False)
     # apply filters
-    condition_filter_value = [0]
-    group_filter_range_values = [4, 8]
-    example_metrics_df = Preprocessor.apply_filter(example_metrics_df,
-                                                   example_condition_variable,
-                                                   condition_filter_value)
-    example_p_values_df = Preprocessor.apply_filter(example_p_values_df,
-                                                    example_condition_variable,
-                                                    condition_filter_value)
-    example_metrics_df = Preprocessor.apply_filter(example_metrics_df,
-                                                   example_group_variable,
-                                                   list(range(group_filter_range_values[0],
-                                                              group_filter_range_values[1])))
-    example_p_values_df = Preprocessor.apply_filter(example_p_values_df,
-                                                    example_group_variable,
-                                                   list(range(group_filter_range_values[0]-1,
-                                                              group_filter_range_values[1]-1)))
-
+    example_data.apply_multiple_filters([0], list(range(4, 8)))
     # specify data-related plotting parameters (optional)
-    example_group_unique_values = \
-        sorted(list(set(example_metrics_df[example_group_variable].tolist())))
-    example_y_tick_labels = [str(s) + " days" for s in example_group_unique_values]
+    example_y_tick_labels = example_data.get_y_tick_labels()
 
     # --- plot data ---
-    generate_plot(example_metrics_df,
-                  example_metrics_variable_list,
+    generate_plot(example_data.prep_results["metrics"],
+                  example_data.prep_variables["group"],
+                  example_data.prep_results["metrics variables"],
                   [-50, 150],
-                  p_values_df=example_p_values_df,
-                  p_values_variable=example_p_values_df.columns[0],
+                  p_values_df=example_data.prep_results["p-values"],
+                  p_values_variable=example_data.prep_results["p-values variable"],
                   specified_x_label='Weight change [g]',
                   specified_y_label='Age',
                   specified_x_label_text_padding=20,
