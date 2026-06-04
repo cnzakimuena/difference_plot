@@ -235,5 +235,5 @@ if __name__ == '__main__':
 
     # --- read data ---
     EXAMPLE_DATA_PATH = r'.\chickweight.csv'
-    example_preprocessor = Preprocessor(EXAMPLE_DATA_PATH)
-    example_preprocessor.get_preprocessed_data(save_csv_files=True)
+    example_data = Preprocessor(EXAMPLE_DATA_PATH)
+    example_data.get_preprocessed_data(save_csv_files=True)
